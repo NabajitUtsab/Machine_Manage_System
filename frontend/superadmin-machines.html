@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Machines — Four H Group MMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header"></header>
+
+<nav class="navigation">
+    <a href="superadmin-dashboard.html">Dashboard</a>
+    <a href="superadmin-concerns.html">Concerns</a>
+    <a href="superadmin-machines.html" class="active">Machines</a>
+    <a href="superadmin-users.html">Users</a>
+    <a href="superadmin-transfers.html">Transfers</a>
+    <a href="superadmin-notifications.html">Notifications</a>
+    <a href="superadmin-register.html">Register</a>
+    <a href="superadmin-profile.html">Profile</a>
+    <a href="scan.html">Scan QR</a>
+</nav>
+
+<div class="container">
+
+    <div class="page-title-bar">
+        <div class="page-title">Manage Machines</div>
+    </div>
+
+    <!-- Create Machine -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><span class="card-title-icon"></span>Create New Machine</div>
+        </div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Machine Code</label>
+                    <input type="text" id="machineCode" placeholder="e.g. M-0042">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Group Name</label>
+                    <input type="text" id="machineGroup" placeholder="e.g. Heavy Equipment">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Origin Concern</label>
+                    <select id="machineConcernName">
+                        <option value="">— Select Concern —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Initial Status</label>
+                    <select id="machineStatus">
+                        <option value="">Default (IDLE)</option>
+                        <option value="IDLE">IDLE</option>
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="MAINTENANCE">MAINTENANCE</option>
+                        <option value="READY_TO_TRANSFER">READY TO TRANSFER</option>
+                    </select>
+                </div>
+                <div style="padding-bottom:1px;">
+                    <button class="btn-gold" onclick="createMachine()">➕ Create Machine</button>
+                </div>
+            </div>
+            <div id="createMsg" class="message" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Machines Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><span class="card-title-icon"></span>All Machines</div>
+            <button class="btn-ghost" style="font-size:11px; padding:7px 14px;" onclick="loadMachines()">↻ Refresh</button>
+        </div>
+        <div class="card-body" style="padding:0;">
+            <div class="table-wrapper">
+                <table id="machineTable">
+                    <thead>
+                    <tr>
+                        <th>ID</th><th>Code</th><th>Group</th><th>Status</th>
+                        <th>Origin</th><th>Current Location</th><th>QR</th><th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-light);">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Modal -->
+<div id="qrModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Machine QR Code</div>
+            <button class="modal-close" onclick="closeQRModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div id="qrCodeContainer"></div>
+            <div id="machineDetailsContainer"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost" onclick="closeQRModal()">Close</button>
+            <button class="btn-primary" onclick="printQR()">🖨️ Print</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content" style="max-width:460px;">
+        <div class="modal-header">
+            <div class="modal-title">Edit Machine</div>
+            <button class="modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editMachineId">
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Machine Code</label>
+                <input type="text" id="editMachineCode" placeholder="Machine Code">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">Group Name</label>
+                <input type="text" id="editMachineGroup" placeholder="Group Name">
+            </div>
+            <div class="form-group" style="margin-bottom:4px;">
+                <label class="form-label">Status</label>
+                <select id="editMachineStatus">
+                    <option value="IDLE">IDLE</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="MAINTENANCE">MAINTENANCE</option>
+                    <option value="READY_TO_TRANSFER">READY TO TRANSFER</option>
+                </select>
+            </div>
+            <div id="updateMsg" class="message" style="display:none; margin-top:12px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-gold" onclick="updateMachine()">💾 Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        buildHeader('Manage Machines', 'superadmin-notifications.html');
+        loadConcerns();
+        loadMachines();
+    });
+
+    async function loadConcerns() {
+        const concerns = await apiRequest("/superadmin/concerns");
+        const sel = document.getElementById("machineConcernName");
+        sel.innerHTML = '<option value="">— Select Concern —</option>';
+        concerns.forEach(c => sel.innerHTML += `<option value="${c.name}">${c.name}</option>`);
+    }
+
+    async function createMachine() {
+        const code = document.getElementById("machineCode").value.trim();
+        const groupName = document.getElementById("machineGroup").value.trim();
+        const concernName = document.getElementById("machineConcernName").value;
+        const status = document.getElementById("machineStatus").value;
+        if (!code || !groupName || !concernName) {
+            showMessage('createMsg', 'Please fill in all required fields', 'warning'); return;
+        }
+        try {
+            let url = `/superadmin/machines?code=${encodeURIComponent(code)}&groupName=${encodeURIComponent(groupName)}&concernName=${encodeURIComponent(concernName)}`;
+            if (status) url += `&status=${encodeURIComponent(status)}`;
+            await apiRequest(url, "POST");
+            showMessage('createMsg', '✅ Machine created successfully!', 'success');
+            document.getElementById("machineCode").value = "";
+            document.getElementById("machineGroup").value = "";
+            document.getElementById("machineConcernName").value = "";
+            document.getElementById("machineStatus").value = "";
+            loadMachines();
+        } catch (err) { showMessage('createMsg', "Error: " + err.message, 'error'); }
+    }
+
+    async function loadMachines() {
+        try {
+            const machines = await apiRequest("/superadmin/machines");
+            const tbody = document.querySelector("#machineTable tbody");
+            if (!machines.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-light);">No machines found</td></tr>'; return;
+            }
+            tbody.innerHTML = machines.map(m => `
+        <tr>
+          <td class="td-bold">#${m.id}</td>
+          <td class="td-bold">${m.code}</td>
+          <td>${m.groupName}</td>
+          <td><span class="status-badge status-${m.status}">${m.status.replace(/_/g,' ')}</span></td>
+          <td>${m.originConcern?.name || '—'}</td>
+          <td>${m.currentConcern?.name || '—'}</td>
+          <td><button class="btn-info" style="padding:6px 10px; font-size:11px;" onclick="viewQRCode(${m.id})">QR</button></td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-ghost" style="padding:6px 10px; font-size:11px;" onclick="editMachine(${m.id})">✏️ Edit</button>
+              <button class="btn-danger" onclick="deleteMachine(${m.id}, '${m.code}')">Delete</button>
+            </div>
+          </td>
+        </tr>`).join('');
+        } catch (err) { alert("Error: " + err.message); }
+    }
+
+    async function viewQRCode(machineId) {
+        try {
+            const [machine, qrData] = await Promise.all([
+                apiRequest(`/machines/${machineId}`),
+                apiRequest(`/machines/qr/base64/${machineId}`)
+            ]);
+            document.getElementById("qrCodeContainer").innerHTML = `<img src="${qrData.base64}" alt="QR Code" class="qr-image">`;
+            document.getElementById("machineDetailsContainer").innerHTML = `
+        <div class="machine-info">
+          <p><strong>Code</strong>${machine.code}</p>
+          <p><strong>Group</strong>${machine.groupName}</p>
+          <p><strong>Status</strong><span class="status-badge status-${machine.status}">${machine.status.replace(/_/g,' ')}</span></p>
+          <p><strong>Origin</strong>${machine.originConcern?.name || '—'}</p>
+          <p><strong>Current</strong>${machine.currentConcern?.name || '—'}</p>
+        </div>`;
+            showQRModal();
+        } catch (err) { alert("Error loading QR: " + err.message); }
+    }
+
+    async function editMachine(id) {
+        const machine = await apiRequest(`/machines/${id}`);
+        document.getElementById("editMachineId").value = machine.id;
+        document.getElementById("editMachineCode").value = machine.code;
+        document.getElementById("editMachineGroup").value = machine.groupName;
+        document.getElementById("editMachineStatus").value = machine.status;
+        document.getElementById("editModal").style.display = "block";
+    }
+
+    async function updateMachine() {
+        const id = document.getElementById("editMachineId").value;
+        const code = document.getElementById("editMachineCode").value.trim();
+        const groupName = document.getElementById("editMachineGroup").value.trim();
+        const status = document.getElementById("editMachineStatus").value;
+        if (!code || !groupName) { showMessage('updateMsg', 'Please fill all fields', 'warning'); return; }
+        try {
+            await apiRequest(`/superadmin/machines/${id}?code=${encodeURIComponent(code)}&groupName=${encodeURIComponent(groupName)}&status=${encodeURIComponent(status)}`, "PUT");
+            closeEditModal();
+            loadMachines();
+        } catch (err) { showMessage('updateMsg', "Error: " + err.message, 'error'); }
+    }
+
+    function closeEditModal() { document.getElementById("editModal").style.display = "none"; }
+
+    async function deleteMachine(id, code) {
+        if (!confirm(`Delete machine "${code}"?`)) return;
+        await apiRequest(`/superadmin/machines/${id}`, "DELETE");
+        loadMachines();
+    }
+
+    window.onclick = e => {
+        if (e.target === document.getElementById('qrModal')) closeQRModal();
+        if (e.target === document.getElementById('editModal')) closeEditModal();
+    };
+</script>
+</body>
+</html>

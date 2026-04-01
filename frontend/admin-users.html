@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>ADMIN users</h2>
+
+    <div class="header-right">
+        <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">Machines</a>
+    <a href="admin-users.html" class="active">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-register.html">Register User</a>
+    <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Users in Your Concern</h3>
+        <button onclick="loadUsers()">Refresh</button>
+        <table id="userTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Concern</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadUsers();
+    });
+
+    async function loadUsers() {
+        try {
+            const users = await apiRequest("/admin/users");
+            const tbody = document.querySelector("#userTable tbody");
+            tbody.innerHTML = "";
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No users found in your concern</td></tr>';
+                return;
+            }
+
+            users.forEach(u => {
+                tbody.innerHTML += `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username}</td>
+                    <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+                    <td>${u.concern?.name || '-'}</td>
+                </tr>
+            `;
+            });
+        } catch (err) {
+            alert("Error loading users: " + err.message);
+        }
+    }
+</script>
+
+</body>
+</html>

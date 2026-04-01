@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferred Out Machines - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>TRANSFERRED Machines</h2>
+
+    <div class="header-right">
+        <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">All Machines</a>
+    <a href="admin-machines-owned.html">Owned</a>
+    <a href="admin-machines-received.html">Received</a>
+    <a href="admin-machines-transferred.html" class="active">Transferred Out</a>
+    <a href="admin-machines-inhouse.html">In-House</a>
+    <a href="admin-users.html">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-register.html">Register User</a>
+    <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Machines Transferred Out to Other Concerns</h3>
+        <p class="info-text">All transfers that were initiated FROM your concern to other concerns.</p>
+        <button onclick="loadTransfers()">Refresh</button>
+        <div id="summary" style="margin: 10px 0; font-weight: bold; color: #667eea;"></div>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin: 10px 0;">
+            <span id="countInitiated" style="padding:6px 12px; background:#fff3cd; color:#856404; border-radius:15px; font-weight:bold;"></span>
+            <span id="countCompleted" style="padding:6px 12px; background:#d4edda; color:#155724; border-radius:15px; font-weight:bold;"></span>
+            <span id="countReturned" style="padding:6px 12px; background:#d1ecf1; color:#0c5460; border-radius:15px; font-weight:bold;"></span>
+        </div>
+
+        <table id="transferTable">
+            <thead>
+            <tr>
+                <th>Transfer ID</th>
+                <th>Machine Code</th>
+                <th>Group</th>
+                <th>Sent To</th>
+                <th>Status</th>
+                <th>Initiated At</th>
+                <th>Completed At</th>
+                <th>Returned At</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadTransfers();
+    });
+
+    async function loadTransfers() {
+        try {
+            const transfers = await apiRequest("/admin/machines/transferred-out");
+            const tbody = document.querySelector("#transferTable tbody");
+            tbody.innerHTML = "";
+
+            document.getElementById("summary").textContent = `Total Transfers Out: ${transfers.length}`;
+
+            const initiated = transfers.filter(t => t.status === 'INITIATED').length;
+            const completed = transfers.filter(t => t.status === 'COMPLETED').length;
+            const returned = transfers.filter(t => t.status === 'RETURNED').length;
+
+            document.getElementById("countInitiated").textContent = `⏳ In Transit: ${initiated}`;
+            document.getElementById("countCompleted").textContent = `✅ Completed: ${completed}`;
+            document.getElementById("countReturned").textContent = `↩️ Returned: ${returned}`;
+
+            if (transfers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No transfers found</td></tr>';
+                return;
+            }
+
+            transfers.forEach(t => {
+                tbody.innerHTML += `
+          <tr>
+            <td>${t.id}</td>
+            <td>${t.machines?.code || '-'}</td>
+            <td>${t.machines?.groupName || '-'}</td>
+            <td>${t.toConcern?.name || '-'}</td>
+            <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+            <td>${formatDateTime(t.initiatedAt)}</td>
+            <td>${formatDateTime(t.completedAt)}</td>
+            <td>${formatDateTime(t.returnedAt)}</td>
+          </tr>
+        `;
+            });
+        } catch (err) {
+            alert("Error loading transfers: " + err.message);
+        }
+    }
+</script>
+
+</body>
+</html>

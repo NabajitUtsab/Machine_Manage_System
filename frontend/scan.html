@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Scanner</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+
+<header>
+  <h2>Scan Machine QR Code</h2>
+  <button class="logout" onclick="goBack()">Go Back</button>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h3>Camera Scanner</h3>
+    <div id="reader"></div>
+    <button id="startBtn" onclick="startScanner()">Start Scanner</button>
+    <button id="stopBtn" onclick="stopScanner()" style="display:none;">Stop Scanner</button>
+  </div>
+
+  <div class="card">
+    <h3>Machine Details</h3>
+    <div id="machineDetails" class="machine-details">
+      <p>Scan a QR code to view machine details...</p>
+    </div>
+    <button id="viewQRBtn" onclick="showQRModalFromScan()" style="display:none;">View Full QR & Print</button>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div id="qrModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeQRModal()">&times;</span>
+    <h3>Machine QR Code & Details</h3>
+    <div id="qrCodeContainer"></div>
+    <div id="machineDetailsContainer"></div>
+    <button onclick="printQR()">Print QR Code</button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/scan.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-House Machines — Four H Group MMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="main-header"></header>
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">All Machines</a>
+    <a href="admin-machines-owned.html">Owned</a>
+    <a href="admin-machines-received.html">Received</a>
+    <a href="admin-machines-transferred.html">Transferred Out</a>
+    <a href="admin-machines-inhouse.html" class="active">In-House</a>
+    <a href="admin-users.html">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-notifications.html">Notifications</a>
+    <a href="admin-register.html">Register</a>
+    <a href="admin-profile.html">Profile</a>
+    <a href="scan.html">Scan QR</a></nav>
+<div class="container">
+
+    <div class="page-title-bar">
+        <div>
+            <div class="page-title">In-House Machines</div>
+            <div class="page-subtitle">Machines physically present in your concern right now</div>
+        </div>
+        <button class="btn-ghost" style="font-size:11px; padding:7px 14px;" onclick="loadMachines()">↻ Refresh</button>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-number" id="statTotal">—</div><div class="stat-label">Total In-House</div><div class="stat-icon">📦</div></div>
+        <div class="stat-card green"><div class="stat-number" id="statOwned">—</div><div class="stat-label">Our Own</div><div class="stat-icon">🏠</div></div>
+        <div class="stat-card amber"><div class="stat-number" id="statBorrowed">—</div><div class="stat-label">Borrowed</div><div class="stat-icon">🔄</div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title"><span class="card-title-icon"></span>Current In-House Inventory</div>
+        </div>
+        <div class="card-body" style="padding:0;">
+            <div class="table-wrapper">
+                <table id="machineTable">
+                    <thead><tr>
+                        <th>ID</th><th>Code</th><th>Group</th><th>Status</th><th>Origin</th><th>Type</th><th>QR</th>
+                    </tr></thead>
+                    <tbody><tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-light);">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- QR Modal -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Machine QR Code</div>
+                <button class="modal-close" onclick="closeQRModal()">✕</button>
+            </div>
+            <div class="modal-body"><div id="qrCodeContainer"></div></div>
+            <div class="modal-footer">
+                <button class="btn-ghost" onclick="closeQRModal()">Close</button>
+                <button class="btn-primary" onclick="printQR()">🖨️ Print</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        buildHeader('In-House Machines', 'admin-notifications.html');
+        init();
+    });
+
+    let myConcernName = '';
+
+    async function init() {
+        myConcernName = getConcernName();
+        loadMachines();
+    }
+
+    async function loadMachines() {
+        const machines = await apiRequest("/admin/machines/inhouse");
+        const owned    = machines.filter(m => m.originConcern?.name === myConcernName);
+        const borrowed = machines.filter(m => m.originConcern?.name !== myConcernName);
+
+        document.getElementById("statTotal").textContent   = machines.length;
+        document.getElementById("statOwned").textContent   = owned.length;
+        document.getElementById("statBorrowed").textContent = borrowed.length;
+
+        const tbody = document.querySelector("#machineTable tbody");
+        if (!machines.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-light);">No in-house machines found</td></tr>'; return;
+        }
+        tbody.innerHTML = machines.map(m => {
+            const isBorrowed = m.originConcern?.name !== myConcernName;
+            return `<tr>
+        <td class="td-bold">#${m.id}</td>
+        <td class="td-bold">${m.code}</td>
+        <td>${m.groupName}</td>
+        <td><span class="status-badge status-${m.status}">${m.status.replace(/_/g,' ')}</span></td>
+        <td>${m.originConcern?.name || '—'}</td>
+        <td>
+          <span style="padding:4px 10px; border-radius:12px; font-size:11px; font-weight:600; font-family:var(--font-display); letter-spacing:0.06em;
+            background:${isBorrowed ? 'var(--warning-bg)' : 'var(--success-bg)'};
+            color:${isBorrowed ? 'var(--warning)' : 'var(--success)'};">
+            ${isBorrowed ? '🔄 Borrowed' : '🏠 Own'}
+          </span>
+        </td>
+        <td><button class="btn-info" style="padding:6px 10px; font-size:11px;" onclick="viewQR(${m.id})">QR</button></td>
+      </tr>`;
+        }).join('');
+    }
+
+    async function viewQR(machineId) {
+        const qrData = await apiRequest(`/machines/qr/base64/${machineId}`);
+        document.getElementById("qrCodeContainer").innerHTML = `<img src="${qrData.base64}" alt="QR Code" class="qr-image">`;
+        showQRModal();
+    }
+
+    window.onclick = e => { if (e.target === document.getElementById('qrModal')) closeQRModal(); };
+</script>
+</body>
+</html>

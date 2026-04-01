@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperAdmin Dashboard — Four H Group MMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header"></header>
+
+<nav class="navigation">
+    <a href="superadmin-dashboard.html" class="active">Dashboard</a>
+    <a href="superadmin-concerns.html">Concerns</a>
+    <a href="superadmin-machines.html">Machines</a>
+    <a href="superadmin-users.html">Users</a>
+    <a href="superadmin-transfers.html">Transfers</a>
+    <a href="superadmin-notifications.html">Notifications</a>
+    <a href="superadmin-register.html">Register</a>
+    <a href="superadmin-profile.html">Profile</a>
+    <a href="scan.html">Scan QR</a>
+</nav>
+
+<div class="container">
+
+    <div class="page-title-bar">
+        <div>
+            <div class="page-title">System Overview</div>
+            <div class="page-subtitle">Four H Group · Machine Management System</div>
+        </div>
+        <span id="dateTime" style="font-size:12px; color:var(--text-light); font-family:var(--font-display); letter-spacing:0.06em;"></span>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+            <div class="stat-number" id="statConcerns">—</div>
+            <div class="stat-label">Concerns</div>
+            <div class="stat-icon">🏢</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-number" id="statMachines">—</div>
+            <div class="stat-label">Total Machines</div>
+            <div class="stat-icon">⚙️</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-number" id="statUsers">—</div>
+            <div class="stat-label">Users</div>
+            <div class="stat-icon">👤</div>
+        </div>
+        <div class="stat-card amber">
+            <div class="stat-number" id="statTransfers">—</div>
+            <div class="stat-label">Transfers</div>
+            <div class="stat-icon">🔄</div>
+        </div>
+        <div class="stat-card red">
+            <div class="stat-number" id="statReady">—</div>
+            <div class="stat-label">Ready to Transfer</div>
+            <div class="stat-icon">⚠️</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statInTransit">—</div>
+            <div class="stat-label">In Transit</div>
+            <div class="stat-icon">🚚</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions + Alerts -->
+    <div class="dashboard-grid">
+
+        <div class="quick-action-card">
+            <div class="card-header">
+                <div class="card-title"><span class="card-title-icon"></span>Quick Actions</div>
+            </div>
+            <ul class="quick-action-list">
+                <li><a href="superadmin-concerns.html">🏢 &nbsp;Manage Concerns</a></li>
+                <li><a href="superadmin-machines.html">⚙️ &nbsp;Manage Machines</a></li>
+                <li><a href="superadmin-users.html">👥 &nbsp;Manage Users</a></li>
+                <li><a href="superadmin-transfers.html">🔄 &nbsp;Manage Transfers</a></li>
+                <li><a href="superadmin-register.html">➕ &nbsp;Register New User</a></li>
+                <li><a href="scan.html">📷 &nbsp;Scan QR Code</a></li>
+            </ul>
+        </div>
+
+        <div class="quick-action-card">
+            <div class="card-header">
+                <div class="card-title"><span class="card-title-icon"></span>Live Alerts</div>
+            </div>
+            <div style="padding:16px 20px;" id="alertPanel">
+                <div style="text-align:center; padding:20px; color:var(--text-light); font-size:13px;">Loading alerts...</div>
+            </div>
+        </div>
+
+        <div class="quick-action-card">
+            <div class="card-header">
+                <div class="card-title"><span class="card-title-icon"></span>System Info</div>
+            </div>
+            <div style="padding:16px 20px;">
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--grey-100); font-size:13px;">
+                        <span style="color:var(--text-light); font-family:var(--font-display); font-size:11px; text-transform:uppercase; letter-spacing:0.06em;">Organization</span>
+                        <span style="font-weight:600; color:var(--navy);">Four H Group</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--grey-100); font-size:13px;">
+                        <span style="color:var(--text-light); font-family:var(--font-display); font-size:11px; text-transform:uppercase; letter-spacing:0.06em;">Country</span>
+                        <span style="font-weight:600; color:var(--navy);">Bangladesh 🇧🇩</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--grey-100); font-size:13px;">
+                        <span style="color:var(--text-light); font-family:var(--font-display); font-size:11px; text-transform:uppercase; letter-spacing:0.06em;">System</span>
+                        <span style="font-weight:600; color:var(--navy);">MMS v2.0</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:13px;">
+                        <span style="color:var(--text-light); font-family:var(--font-display); font-size:11px; text-transform:uppercase; letter-spacing:0.06em;">Access Level</span>
+                        <span class="role-badge role-SUPER_ADMIN">Super Admin</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        buildHeader('Super Admin Dashboard', 'superadmin-notifications.html');
+
+        // Date/time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('dateTime').textContent =
+                now.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }) +
+                '  ' + now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        }
+        updateTime();
+        setInterval(updateTime, 60000);
+
+        try {
+            const [concerns, machines, users, transfers, notifs] = await Promise.all([
+                apiRequest("/superadmin/concerns"),
+                apiRequest("/superadmin/machines"),
+                apiRequest("/superadmin/users"),
+                apiRequest("/superadmin/transfers"),
+                apiRequest("/superadmin/notifications")
+            ]);
+
+            document.getElementById('statConcerns').textContent  = concerns.length;
+            document.getElementById('statMachines').textContent  = machines.length;
+            document.getElementById('statUsers').textContent     = users.length;
+            document.getElementById('statTransfers').textContent = transfers.length;
+
+            const ready     = (notifs.readyToTransfer    || []).length;
+            const inTransit = (notifs.initiatedTransfers || []).length;
+            document.getElementById('statReady').textContent    = ready;
+            document.getElementById('statInTransit').textContent = inTransit;
+
+            // Alert panel
+            const alerts = [];
+            if (ready > 0)     alerts.push({ type:'warning', text: `${ready} machine(s) ready to transfer`, link:'superadmin-notifications.html' });
+            if (inTransit > 0) alerts.push({ type:'info',    text: `${inTransit} transfer(s) in transit`,   link:'superadmin-transfers.html' });
+
+            const ap = document.getElementById('alertPanel');
+            if (alerts.length === 0) {
+                ap.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-light); font-size:13px;">✅ All clear — no active alerts</div>';
+            } else {
+                ap.innerHTML = alerts.map(a => `
+          <a href="${a.link}" style="text-decoration:none; display:block;">
+            <div class="notif-card ${a.type}" style="margin:4px 0; cursor:pointer;">
+              <div class="notif-title">${a.text}</div>
+            </div>
+          </a>
+        `).join('');
+            }
+        } catch (err) {
+            document.getElementById('alertPanel').innerHTML = '<p style="color:var(--danger); font-size:13px; padding:10px 0;">Unable to load data</p>';
+        }
+    });
+</script>
+
+</body>
+</html>

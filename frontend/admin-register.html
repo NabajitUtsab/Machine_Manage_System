@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register User - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>ADMIN register</h2>
+
+    <div class="header-right">
+        <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">Machines</a>
+    <a href="admin-users.html">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-register.html" class="active">Register User</a>
+    <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Register New User</h3>
+        <p class="info-text">As an Admin, you can only create USER role in your concern</p>
+
+        <form id="registerForm" onsubmit="event.preventDefault(); registerUser();">
+            <input type="text" id="newUsername" placeholder="Username" required>
+            <input type="password" id="newPassword" placeholder="Password" minlength="6" required>
+            <button type="submit">Create User</button>
+        </form>
+        <p id="registerMsg" class="message"></p>
+    </div>
+
+    <div class="card">
+        <h3>Registration Guidelines</h3>
+        <ul>
+            <li>Admin can only create USER role</li>
+            <li>User will be automatically assigned to your concern</li>
+            <li>Password must be at least 6 characters</li>
+            <li>Username must be unique</li>
+        </ul>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+    });
+
+    async function registerUser() {
+        const username = document.getElementById("newUsername").value.trim();
+        const password = document.getElementById("newPassword").value;
+        const msg = document.getElementById("registerMsg");
+
+        if (!username || !password) {
+            showMessage('registerMsg', 'Please fill all fields', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            showMessage('registerMsg', 'Password must be at least 6 characters', 'error');
+            return;
+        }
+
+        const body = {
+            username,
+            password,
+            role: "USER"
+        };
+
+        try {
+            const result = await apiRequest("/auth/admin/register", "POST", body);
+            showMessage('registerMsg', 'User registered successfully!', 'success');
+            document.getElementById("registerForm").reset();
+
+            setTimeout(() => {
+                clearMessage('registerMsg');
+            }, 3000);
+        } catch (err) {
+            showMessage('registerMsg', "Error: " + err.message, 'error');
+        }
+    }
+</script>
+
+</body>
+</html>

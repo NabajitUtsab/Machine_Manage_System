@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register User - SuperAdmin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>SUPER ADMIN Register</h2>
+
+    <div class="header-right">
+        <a href="superadmin-notifications.html" class="notification-btn">
+            Notifications
+        </a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+
+<nav class="navigation">
+    <a href="superadmin-dashboard.html">Dashboard</a>
+    <a href="superadmin-concerns.html">Concerns</a>
+    <a href="superadmin-machines.html">Machines</a>
+    <a href="superadmin-users.html">Users</a>
+    <a href="superadmin-transfers.html">Transfers</a>
+    <a href="superadmin-register.html" class="active">Register User</a>
+    <a href="superadmin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Register New User</h3>
+        <form id="registerForm" onsubmit="event.preventDefault(); registerUser();">
+            <input type="text" id="newUsername" placeholder="Username" required>
+            <input type="password" id="newPassword" placeholder="Password" minlength="6" required>
+
+            <select id="newRole" required>
+                <option value="">Select Role</option>
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+            </select>
+
+            <select id="newUserConcern">
+                <option value="">Select Concern (Optional for SUPER_ADMIN)</option>
+            </select>
+
+            <button type="submit">Create User</button>
+        </form>
+        <p id="registerMsg" class="message"></p>
+    </div>
+
+    <div class="card">
+        <h3>Registration Guidelines</h3>
+        <ul>
+            <li><strong>SUPER_ADMIN:</strong> Full system access, can manage concerns</li>
+            <li><strong>ADMIN:</strong> Manage machines and users in their concern</li>
+            <li><strong>USER:</strong> Can only mark machines ready for transfer</li>
+        </ul>
+        <p><strong>Note:</strong> SUPER_ADMIN doesn't require a concern. ADMIN and USER should be assigned to a concern.</p>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadConcerns();
+    });
+
+    async function loadConcerns() {
+        try {
+            const concerns = await apiRequest("/superadmin/concerns");
+            const select = document.getElementById("newUserConcern");
+            select.innerHTML = '<option value="">Select Concern (Optional for SUPER_ADMIN)</option>';
+
+            concerns.forEach(c => {
+                select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+            });
+        } catch (err) {
+            console.error("Error loading concerns:", err);
+        }
+    }
+
+    async function registerUser() {
+        const username = document.getElementById("newUsername").value.trim();
+        const password = document.getElementById("newPassword").value;
+        const role = document.getElementById("newRole").value;
+        const concernName = document.getElementById("newUserConcern").value;
+        const msg = document.getElementById("registerMsg");
+
+        if (!username || !password || !role) {
+            msg.textContent = "Please fill all required fields";
+            msg.style.color = "red";
+            return;
+        }
+
+        if (password.length < 6) {
+            msg.textContent = "Password must be at least 6 characters";
+            msg.style.color = "red";
+            return;
+        }
+
+        const body = {
+            username,
+            password,
+            role
+        };
+
+        if (concernName) {
+            body.concernName = concernName;
+        }
+
+        try {
+            console.log("Registering user:", body);
+            const result = await apiRequest("/auth/superadmin/register", "POST", body);
+
+            msg.textContent = "User registered successfully!";
+            msg.style.color = "green";
+
+            document.getElementById("registerForm").reset();
+
+            setTimeout(() => {
+                msg.textContent = "";
+            }, 3000);
+        } catch (err) {
+            msg.textContent = "Error: " + err.message;
+            msg.style.color = "red";
+            console.error("Registration error:", err);
+        }
+    }
+</script>
+
+</body>
+</html>

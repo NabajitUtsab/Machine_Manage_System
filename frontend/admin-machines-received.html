@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Received Machines - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>RECEIVED Machines</h2>
+
+    <div class="header-right">
+        <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">All Machines</a>
+    <a href="admin-machines-owned.html">Owned</a>
+    <a href="admin-machines-received.html" class="active">Received</a>
+    <a href="admin-machines-transferred.html">Transferred Out</a>
+    <a href="admin-machines-inhouse.html">In-House</a>
+    <a href="admin-users.html">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-register.html">Register User</a>
+    <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Machines Received from Other Concerns</h3>
+        <p class="info-text">These are machines transferred TO your concern from other concerns.</p>
+        <button onclick="loadTransfers()">Refresh</button>
+        <div id="summary" style="margin: 10px 0; font-weight: bold; color: #667eea;"></div>
+        <table id="transferTable">
+            <thead>
+            <tr>
+                <th>Transfer ID</th>
+                <th>Machine Code</th>
+                <th>Group</th>
+                <th>Received From</th>
+                <th>Transfer Status</th>
+                <th>Initiated At</th>
+                <th>Completed At</th>
+                <th>Returned At</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadTransfers();
+    });
+
+    async function loadTransfers() {
+        try {
+            const transfers = await apiRequest("/admin/machines/received");
+            const tbody = document.querySelector("#transferTable tbody");
+            tbody.innerHTML = "";
+
+            document.getElementById("summary").textContent = `Total Received Transfers: ${transfers.length}`;
+
+            if (transfers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No received machines found</td></tr>';
+                return;
+            }
+
+            transfers.forEach(t => {
+                tbody.innerHTML += `
+          <tr>
+            <td>${t.id}</td>
+            <td>${t.machines?.code || '-'}</td>
+            <td>${t.machines?.groupName || '-'}</td>
+            <td>${t.fromConcern?.name || '-'}</td>
+            <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+            <td>${formatDateTime(t.initiatedAt)}</td>
+            <td>${formatDateTime(t.completedAt)}</td>
+            <td>${formatDateTime(t.returnedAt)}</td>
+          </tr>
+        `;
+            });
+        } catch (err) {
+            alert("Error loading received machines: " + err.message);
+        }
+    }
+</script>
+
+</body>
+</html>

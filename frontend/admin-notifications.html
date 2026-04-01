@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications — Four H Group MMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="main-header"></header>
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">All Machines</a>
+    <a href="admin-machines-owned.html">Owned</a>
+    <a href="admin-machines-received.html">Received</a>
+    <a href="admin-machines-transferred.html">Transferred Out</a>
+    <a href="admin-machines-inhouse.html">In-House</a>
+    <a href="admin-users.html">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-notifications.html" class="active">Notifications</a>
+    <a href="admin-register.html">Register</a>
+    <a href="admin-profile.html">Profile</a>
+    <a href="scan.html">Scan QR</a></nav>
+<div class="container">
+
+    <div class="page-title-bar">
+        <div>
+            <div class="page-title">Notifications</div>
+            <div class="page-subtitle">Real-time alerts for machines and transfers in your concern</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span id="lastUpdated" style="font-size:11px; color:var(--text-light); font-family:var(--font-display); letter-spacing:0.06em;"></span>
+            <button class="btn-ghost" style="font-size:11px; padding:7px 14px;" onclick="loadNotifications()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+        <div class="stat-card amber"><div class="stat-number" id="sumReady">—</div><div class="stat-label">Ready to Transfer</div></div>
+        <div class="stat-card blue"><div class="stat-number" id="sumIncoming">—</div><div class="stat-label">Incoming Awaiting</div></div>
+        <div class="stat-card"><div class="stat-number" id="sumOutgoing">—</div><div class="stat-label">Outgoing In Transit</div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+
+            <div class="notif-section-title">
+                ⚠️ Machines Ready to Transfer
+                <span id="readyCount" class="badge-count" style="display:none;"></span>
+            </div>
+            <div id="readyList"><p class="empty-notif">Loading...</p></div>
+
+            <div class="notif-section-title">
+                📥 Incoming Transfers (Awaiting Receipt)
+                <span id="incomingCount" class="badge-count" style="display:none;"></span>
+            </div>
+            <div id="incomingList"><p class="empty-notif">Loading...</p></div>
+
+            <div class="notif-section-title">
+                📤 Outgoing Transfers (In Transit)
+                <span id="outgoingCount" class="badge-count" style="display:none;"></span>
+            </div>
+            <div id="outgoingList"><p class="empty-notif">Loading...</p></div>
+
+        </div>
+    </div>
+</div>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        buildHeader('Notifications', 'admin-notifications.html');
+        init();
+    });
+
+    async function init() {
+        loadNotifications();
+        setInterval(loadNotifications, 30000);
+    }
+
+    async function loadNotifications() {
+        const data = await apiRequest("/admin/notifications");
+        document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString('en-GB');
+
+        const ready    = data.readyToTransfer   || [];
+        const incoming = data.incomingTransfers || [];
+        const outgoing = data.outgoingTransfers || [];
+
+        document.getElementById("sumReady").textContent    = ready.length;
+        document.getElementById("sumIncoming").textContent = incoming.length;
+        document.getElementById("sumOutgoing").textContent = outgoing.length;
+
+        setBadge("readyCount", ready.length);
+        document.getElementById("readyList").innerHTML = ready.length === 0
+            ? '<p class="empty-notif">No machines ready to transfer.</p>'
+            : ready.map(m => `
+          <div class="notif-card warning">
+            <div>
+              <div class="notif-title">⚠️ ${m.code} — ${m.groupName}</div>
+              <div class="notif-sub">Current: <strong>${m.currentConcern?.name || '—'}</strong></div>
+            </div>
+            <span class="status-badge status-READY_TO_TRANSFER">READY</span>
+          </div>`).join('');
+
+        setBadge("incomingCount", incoming.length);
+        document.getElementById("incomingList").innerHTML = incoming.length === 0
+            ? '<p class="empty-notif">No incoming transfers awaiting receipt.</p>'
+            : incoming.map(t => `
+          <div class="notif-card info">
+            <div>
+              <div class="notif-title">📥 Transfer #${t.id} — ${t.machines?.code || '—'}</div>
+              <div class="notif-sub">From: <strong>${t.fromConcern?.name || '—'}</strong> | Initiated: ${formatDateTime(t.initiatedAt)}</div>
+            </div>
+            <button class="btn-success" style="padding:7px 14px; font-size:11px;" onclick="receiveTransfer(${t.id})">📥 Receive Now</button>
+          </div>`).join('');
+
+        setBadge("outgoingCount", outgoing.length);
+        document.getElementById("outgoingList").innerHTML = outgoing.length === 0
+            ? '<p class="empty-notif">No outgoing transfers in transit.</p>'
+            : outgoing.map(t => `
+          <div class="notif-card success">
+            <div>
+              <div class="notif-title">📤 Transfer #${t.id} — ${t.machines?.code || '—'}</div>
+              <div class="notif-sub">To: <strong>${t.toConcern?.name || '—'}</strong> | Initiated: ${formatDateTime(t.initiatedAt)}</div>
+            </div>
+            <span class="status-badge status-INITIATED">IN TRANSIT</span>
+          </div>`).join('');
+    }
+
+    async function receiveTransfer(transferId) {
+        if (!confirm(`Receive Transfer #${transferId}?`)) return;
+        await apiRequest(`/transfer/receive?transferId=${transferId}`, "POST");
+        loadNotifications();
+    }
+
+    function setBadge(id, count) {
+        const el = document.getElementById(id);
+        el.textContent = count;
+        el.style.display = count > 0 ? 'inline' : 'none';
+    }
+</script>
+</body>
+</html>

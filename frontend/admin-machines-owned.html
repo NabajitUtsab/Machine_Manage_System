@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owned Machines - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>OWNED Machines</h2>
+
+    <div class="header-right">
+        <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+
+<nav class="navigation">
+    <a href="admin-dashboard.html">Dashboard</a>
+    <a href="admin-machines.html">All Machines</a>
+    <a href="admin-machines-owned.html" class="active">Owned</a>
+    <a href="admin-machines-received.html">Received</a>
+    <a href="admin-machines-transferred.html">Transferred Out</a>
+    <a href="admin-machines-inhouse.html">In-House</a>
+    <a href="admin-users.html">Users</a>
+    <a href="admin-transfers.html">Transfers</a>
+    <a href="admin-register.html">Register User</a>
+    <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Machines Originally Purchased by Your Concern</h3>
+        <p class="info-text">These are all machines that were created with your concern as the origin — regardless of where they are now.</p>
+        <button onclick="loadMachines()">Refresh</button>
+        <div id="summary" style="margin: 10px 0; font-weight: bold; color: #667eea;"></div>
+        <table id="machineTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Code</th>
+                <th>Group</th>
+                <th>Status</th>
+                <th>Origin Concern</th>
+                <th>Current Location</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadMachines();
+    });
+
+    async function loadMachines() {
+        try {
+            const machines = await apiRequest("/admin/machines/owned");
+            const tbody = document.querySelector("#machineTable tbody");
+            tbody.innerHTML = "";
+
+            document.getElementById("summary").textContent = `Total Owned Machines: ${machines.length}`;
+
+            if (machines.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No owned machines found</td></tr>';
+                return;
+            }
+
+            machines.forEach(m => {
+                const isAway = m.currentConcern?.name !== m.originConcern?.name;
+                tbody.innerHTML += `
+          <tr>
+            <td>${m.id}</td>
+            <td>${m.code}</td>
+            <td>${m.groupName}</td>
+            <td><span class="status-badge status-${m.status}">${m.status}</span></td>
+            <td>${m.originConcern?.name || '-'}</td>
+            <td style="${isAway ? 'color:#e74c3c;font-weight:bold;' : 'color:#27ae60;font-weight:bold;'}">
+              ${m.currentConcern?.name || '-'} ${isAway ? '(Away)' : '(Here)'}
+            </td>
+          </tr>
+        `;
+            });
+        } catch (err) {
+            alert("Error loading machines: " + err.message);
+        }
+    }
+</script>
+
+</body>
+</html>

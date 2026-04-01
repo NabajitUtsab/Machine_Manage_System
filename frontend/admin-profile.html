@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>ADMIN profile</h2>
+
+    <div class="header-right">
+        <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+
+<nav class="navigation" id="mainNav">
+    <!-- Navigation will be populated based on role -->
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Current Profile Information</h3>
+        <div id="currentProfile" class="profile-info">
+            <p><strong>Username:</strong> <span id="currentUsername"></span></p>
+            <p><strong>Role:</strong> <span id="currentRole"></span></p>
+            <p><strong>Concern:</strong> <span id="currentConcern"></span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Change Password</h3>
+        <form id="passwordForm" onsubmit="event.preventDefault(); changePassword();">
+            <input type="password" id="currentPassword" placeholder="Current Password" required>
+            <input type="password" id="newPassword" placeholder="New Password" minlength="6" required>
+            <input type="password" id="confirmPassword" placeholder="Confirm New Password" minlength="6" required>
+            <button type="submit">Update Password</button>
+        </form>
+        <p id="passwordMsg" class="message"></p>
+    </div>
+
+    <div class="card">
+        <h3>Profile Actions</h3>
+        <button class="btn-danger" onclick="confirmLogout()">Logout from All Devices</button>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadProfile();
+        setupNavigation();
+    });
+
+    function setupNavigation() {
+        const role = getRole();
+        const nav = document.getElementById("mainNav");
+
+        if (role === "ADMIN") {
+            nav.innerHTML = `
+            <a href="admin-dashboard.html">Dashboard</a>
+            <a href="admin-concerns.html">Concerns</a>
+            <a href="admin-machines.html">Machines</a>
+            <a href="admin-users.html">Users</a>
+            <a href="admin-transfers.html">Transfers</a>
+            <a href="admin-register.html">Register User</a>
+            <a href="admin-profile.html" class="active">Profile</a>
+        `;
+        } else if (role === "ADMIN") {
+            nav.innerHTML = `
+            <a href="admin-dashboard.html">Dashboard</a>
+            <a href="admin-machines.html">Machines</a>
+            <a href="admin-users.html">Users</a>
+            <a href="admin-transfers.html">Transfers</a>
+            <a href="admin-register.html">Register User</a>
+            <a href="admin-profile.html" class="active">Profile</a>
+        `;
+        }
+    }
+
+    function loadProfile() {
+        const username = getUsername();
+        const role = getRole();
+        const concernName = getConcernName();
+
+        document.getElementById("currentUsername").textContent = username || "N/A";
+        document.getElementById("currentRole").innerHTML = `<span class="role-badge role-${role}">${role}</span>`;
+        document.getElementById("currentConcern").textContent = concernName && concernName !== 'null' ? concernName : "None";
+    }
+
+    async function changePassword() {
+        const currentPassword = document.getElementById("currentPassword").value;
+        const newPassword = document.getElementById("newPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const msg = document.getElementById("passwordMsg");
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            msg.textContent = "Please fill all fields";
+            msg.style.color = "red";
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            msg.textContent = "New password must be at least 6 characters";
+            msg.style.color = "red";
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            msg.textContent = "New passwords do not match";
+            msg.style.color = "red";
+            return;
+        }
+
+        try {
+            // First verify current password by trying to login
+            const username = getUsername();
+            const loginResponse = await fetch(BASE_URL + "/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password: currentPassword })
+            });
+
+            if (!loginResponse.ok) {
+                msg.textContent = "Current password is incorrect";
+                msg.style.color = "red";
+                return;
+            }
+
+            // Now update password (you need to create this endpoint in backend)
+            // For now, we'll create a new user with same username but different password
+            // This is a workaround - ideally you should have a dedicated update password endpoint
+
+            msg.textContent = "Password change functionality requires a backend endpoint. Please contact administrator.";
+            msg.style.color = "orange";
+
+            // Clear form
+            document.getElementById("passwordForm").reset();
+
+        } catch (err) {
+            msg.textContent = "Error: " + err.message;
+            msg.style.color = "red";
+        }
+    }
+
+    function confirmLogout() {
+        if (confirm("This will logout from all devices. Continue?")) {
+            logout();
+        }
+    }
+</script>
+
+</body>
+</html>

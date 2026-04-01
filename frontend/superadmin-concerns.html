@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Concerns - SuperAdmin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header">
+    <div class="header-left">
+        <span id="userInfo" class="user-info"></span>
+    </div>
+
+    <h2>Manage Concerns</h2>
+
+    <div class="header-right">
+        <a href="superadmin-notifications.html" class="notification-btn">
+            Notifications
+        </a>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</header>
+
+<nav class="navigation">
+    <a href="superadmin-dashboard.html">Dashboard</a>
+    <a href="superadmin-concerns.html" class="active">Concerns</a>
+    <a href="superadmin-machines.html">Machines</a>
+    <a href="superadmin-users.html">Users</a>
+    <a href="superadmin-transfers.html">Transfers</a>
+    <a href="superadmin-register.html">Register User</a>
+    <a href="superadmin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <h3>Create New Concern</h3>
+        <input type="text" id="concernName" placeholder="Concern Name">
+        <button onclick="createConcern()">Create Concern</button>
+        <p id="createMsg" class="message"></p>
+    </div>
+
+    <div class="card">
+        <h3>All Concerns</h3>
+        <button onclick="loadConcerns()">Refresh</button>
+        <table id="concernTable">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        displayUserInfo();
+        loadConcerns();
+    });
+
+    async function createConcern() {
+        const name = document.getElementById("concernName").value.trim();
+        const msg = document.getElementById("createMsg");
+
+        if (!name) {
+            msg.textContent = "Please enter concern name";
+            msg.style.color = "red";
+            return;
+        }
+
+        try {
+            await apiRequest(`/superadmin/concerns?name=${encodeURIComponent(name)}`, "POST");
+            msg.textContent = "Concern created successfully!";
+            msg.style.color = "green";
+            document.getElementById("concernName").value = "";
+            loadConcerns();
+        } catch (err) {
+            msg.textContent = "Error: " + err.message;
+            msg.style.color = "red";
+        }
+    }
+
+    async function loadConcerns() {
+        try {
+            const concerns = await apiRequest("/superadmin/concerns");
+            const tbody = document.querySelector("#concernTable tbody");
+            tbody.innerHTML = "";
+
+            if (concerns.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">No concerns found</td></tr>';
+                return;
+            }
+
+            concerns.forEach(c => {
+                tbody.innerHTML += `
+                <tr>
+                    <td>${c.id}</td>
+                    <td>${c.name}</td>
+                    <td>
+                        <button class="btn-danger" onclick="deleteConcern(${c.id}, '${c.name}')">Delete</button>
+                    </td>
+                </tr>
+            `;
+            });
+        } catch (err) {
+            alert("Error loading concerns: " + err.message);
+        }
+    }
+
+    async function deleteConcern(id, name) {
+        if (!confirm(`Delete concern "${name}"? This cannot be undone.`)) return;
+
+        try {
+            await apiRequest(`/superadmin/concerns/${id}`, "DELETE");
+            alert("Concern deleted!");
+            loadConcerns();
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    }
+</script>
+
+</body>
+</html>

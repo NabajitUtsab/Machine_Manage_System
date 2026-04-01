@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Four H Group MMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+
+<div class="login-wrapper">
+    <div class="login-box">
+
+        <div class="login-brand">
+            <div class="login-logo">4H</div>
+            <div class="login-name">Four H Group</div>
+            <div class="login-tagline">Machine Management System</div>
+        </div>
+
+        <div class="login-card">
+            <h3>Sign In</h3>
+
+            <div style="margin-bottom:14px;">
+                <label class="form-label" style="display:block; margin-bottom:6px;">Username</label>
+                <input type="text" id="username" placeholder="Enter username" required autocomplete="username">
+            </div>
+
+            <div>
+                <label class="form-label" style="display:block; margin-bottom:6px;">Password</label>
+                <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
+            </div>
+
+            <button class="btn-login" onclick="loginUser()">Sign In</button>
+
+            <div id="msg" class="message"></div>
+        </div>
+
+        <p style="text-align:center; margin-top:20px; font-size:11px; color:rgba(255,255,255,0.25); letter-spacing:0.08em;">
+            © 2025 FOUR H GROUP BANGLADESH · ALL RIGHTS RESERVED
+        </p>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script>
+    // Override showMessage for login page dark theme
+    const origShowMsg = showMessage;
+    function showMessage(id, msg, type) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.style.marginTop = '14px';
+        el.style.padding = '11px 14px';
+        el.style.borderRadius = '6px';
+        el.style.fontSize = '13px';
+        el.style.fontWeight = '500';
+        if (type === 'success') {
+            el.style.background = 'rgba(26,122,74,0.2)';
+            el.style.color = '#6debb0';
+            el.style.border = '1px solid rgba(26,122,74,0.4)';
+        } else {
+            el.style.background = 'rgba(160,32,32,0.2)';
+            el.style.color = '#ff8888';
+            el.style.border = '1px solid rgba(160,32,32,0.4)';
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Users - SuperAdmin</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header">
+  <div class="header-left">
+    <span id="userInfo" class="user-info"></span>
+  </div>
+
+  <h2>Manage Users</h2>
+
+  <div class="header-right">
+    <a href="superadmin-notifications.html" class="notification-btn">
+      Notifications
+    </a>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+
+<nav class="navigation">
+  <a href="superadmin-dashboard.html">Dashboard</a>
+  <a href="superadmin-concerns.html">Concerns</a>
+  <a href="superadmin-machines.html">Machines</a>
+  <a href="superadmin-users.html" class="active">Users</a>
+  <a href="superadmin-transfers.html">Transfers</a>
+  <a href="superadmin-register.html">Register User</a>
+  <a href="superadmin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <h3>All Users</h3>
+    <button onclick="loadUsers()">Refresh</button>
+    <table id="userTable">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Concern</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    displayUserInfo();
+    loadUsers();
+  });
+
+  async function loadUsers() {
+    try {
+      const users = await apiRequest("/superadmin/users");
+      const tbody = document.querySelector("#userTable tbody");
+      tbody.innerHTML = "";
+
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No users found</td></tr>';
+        return;
+      }
+
+      users.forEach(u => {
+        tbody.innerHTML += `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username}</td>
+                    <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+                    <td>${u.concern?.name || '-'}</td>
+                    <td>
+                        <button class="btn-danger" onclick="deleteUser(${u.id}, '${u.username}')">Delete</button>
+                    </td>
+                </tr>
+            `;
+      });
+    } catch (err) {
+      alert("Error loading users: " + err.message);
+    }
+  }
+
+  async function deleteUser(id, username) {
+    if (!confirm(`Delete user "${username}"?`)) return;
+
+    try {
+      await apiRequest(`/superadmin/users/${id}`, "DELETE");
+      alert("User deleted!");
+      loadUsers();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Machines - Admin</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header">
+  <div class="header-left">
+    <span id="userInfo" class="user-info"></span>
+  </div>
+
+  <h2>Manage Machines</h2>
+
+  <div class="header-right">
+    <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+
+<nav class="navigation">
+  <a href="admin-dashboard.html">Dashboard</a>
+  <a href="admin-machines.html" class="active">Machines</a>
+  <a href="admin-users.html">Users</a>
+  <a href="admin-transfers.html">Transfers</a>
+  <a href="admin-register.html">Register User</a>
+  <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <h3>Machines in Your Concern</h3>
+    <button onclick="loadMachines()">Refresh</button>
+    <table id="machineTable">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Code</th>
+        <th>Group</th>
+        <th>Status</th>
+        <th>Origin</th>
+        <th>Current</th>
+        <th>QR Code</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- QR Modal -->
+<div id="qrModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeQRModal()">&times;</span>
+    <h3>Machine QR Code</h3>
+    <div id="qrCodeContainer"></div>
+    <div id="machineDetailsContainer"></div>
+    <button onclick="printQR()">Print QR Code</button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    displayUserInfo();
+    loadMachines();
+  });
+
+  async function loadMachines() {
+    try {
+      const machines = await apiRequest("/admin/machines");
+      const tbody = document.querySelector("#machineTable tbody");
+      tbody.innerHTML = "";
+
+      if (machines.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8">No machines found in your concern</td></tr>';
+        return;
+      }
+
+      machines.forEach(m => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${m.id}</td>
+            <td>${m.code}</td>
+            <td>${m.groupName}</td>
+            <td><span class="status-badge status-${m.status}">${m.status}</span></td>
+            <td>${m.originConcern?.name || '-'}</td>
+            <td>${m.currentConcern?.name || '-'}</td>
+            <td><button onclick="viewQRCode(${m.id})">View QR</button></td>
+            <td><button class="btn-danger" onclick="deleteMachine(${m.id}, '${m.code}')">Delete</button></td>
+        </tr>
+    `;
+      });
+    } catch (err) {
+        alert("Error loading machines: " + err.message);
+    }
+}
+
+  async function viewQRCode(machineId) {
+    try {
+      const machine = await apiRequest(`/machines/${machineId}`);
+
+
+      const qrData = await apiRequest(`/machines/qr/base64/${machineId}`);
+
+      const qrContainer = document.getElementById("qrCodeContainer");
+      const detailsContainer = document.getElementById("machineDetailsContainer");
+
+
+      qrContainer.innerHTML = `<img src="${qrData.base64}" alt="QR Code" class="qr-image">`;
+
+      // detailsContainer.innerHTML = `
+      //       <div class="machine-info">
+      //           <h4>Machine Details</h4>
+      //           <p><strong>ID:</strong> ${machine.id}</p>
+      //           <p><strong>Code:</strong> ${machine.code}</p>
+      //           <p><strong>Group:</strong> ${machine.groupName}</p>
+      //           <p><strong>Status:</strong> ${machine.status}</p>
+      //           <p><strong>Origin:</strong> ${machine.originConcern?.name || '-'}</p>
+      //           <p><strong>Current:</strong> ${machine.currentConcern?.name || '-'}</p>
+      //       </div>
+      //   `;
+
+      showQRModal();
+    } catch (err) {
+      alert("Error loading QR: " + err.message);
+    }
+  }
+
+async function deleteMachine(id, code) {
+    if (!confirm(`Delete machine "\${code}"?`)) return;
+    try {
+      await apiRequest(`/admin/machines/${id}`, "DELETE");
+        alert("Machine deleted!");
+        loadMachines();
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
+</script>
+
+</body>
+</html>

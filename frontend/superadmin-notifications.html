@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Notifications — Four H Group MMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header"></header>
+
+<nav class="navigation">
+    <a href="superadmin-dashboard.html">Dashboard</a>
+    <a href="superadmin-concerns.html">Concerns</a>
+    <a href="superadmin-machines.html">Machines</a>
+    <a href="superadmin-users.html">Users</a>
+    <a href="superadmin-transfers.html">Transfers</a>
+    <a href="superadmin-notifications.html" class="active">Notifications</a>
+    <a href="superadmin-register.html">Register</a>
+    <a href="superadmin-profile.html">Profile</a>
+    <a href="scan.html">Scan QR</a>
+</nav>
+
+<div class="container">
+
+    <div class="page-title-bar">
+        <div>
+            <div class="page-title">System Notifications</div>
+            <div class="page-subtitle">Live monitoring of all machines and transfers across concerns</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span id="lastUpdated" style="font-size:11px; color:var(--text-light); font-family:var(--font-display); letter-spacing:0.06em;"></span>
+            <button class="btn-ghost" style="font-size:11px; padding:7px 14px;" onclick="loadNotifications()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <!-- Summary Badges -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+        <div class="stat-card amber">
+            <div class="stat-number" id="summaryReady">—</div>
+            <div class="stat-label">Ready to Transfer</div>
+            <div class="stat-icon">⚠️</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-number" id="summaryTransit">—</div>
+            <div class="stat-label">In Transit</div>
+            <div class="stat-icon">🚚</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-number" id="summaryCompleted">—</div>
+            <div class="stat-label">Completed</div>
+            <div class="stat-icon">✅</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+
+            <!-- Ready to Transfer -->
+            <div class="notif-section-title">
+                ⚠️ Machines Ready to Transfer
+                <span id="readyCount" class="badge-count" style="display:none;"></span>
+            </div>
+            <div id="readyList"><p class="empty-notif">Loading...</p></div>
+
+            <!-- In Transit -->
+            <div class="notif-section-title">
+                🚚 Transfers In Transit
+                <span id="initiatedCount" class="badge-count" style="display:none;"></span>
+            </div>
+            <div id="initiatedList"><p class="empty-notif">Loading...</p></div>
+
+            <!-- Completed -->
+            <div class="notif-section-title">
+                ✅ Recently Completed
+                <span id="completedCount" class="badge-count" style="display:none;"></span>
+            </div>
+            <div id="completedList"><p class="empty-notif">Loading...</p></div>
+
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        buildHeader('Notifications', 'superadmin-notifications.html');
+        loadNotifications();
+        setInterval(loadNotifications, 30000);
+    });
+
+    async function loadNotifications() {
+        try {
+            const data = await apiRequest("/superadmin/notifications");
+            document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString('en-GB');
+
+            const ready     = data.readyToTransfer    || [];
+            const initiated = data.initiatedTransfers || [];
+            const completed = data.completedTransfers || [];
+
+            // Summary stats
+            document.getElementById("summaryReady").textContent    = ready.length;
+            document.getElementById("summaryTransit").textContent  = initiated.length;
+            document.getElementById("summaryCompleted").textContent = completed.length;
+
+            // Ready
+            updateBadge("readyCount", ready.length);
+            document.getElementById("readyList").innerHTML = ready.length === 0
+                ? '<p class="empty-notif">No machines are in READY TO TRANSFER state.</p>'
+                : ready.map(m => `
+            <div class="notif-card warning">
+              <div>
+                <div class="notif-title">⚠️ ${m.code} — ${m.groupName}</div>
+                <div class="notif-sub">
+                  Current: <strong>${m.currentConcern?.name || '—'}</strong> &nbsp;|&nbsp;
+                  Origin: ${m.originConcern?.name || '—'}
+                </div>
+              </div>
+              <span class="status-badge status-READY_TO_TRANSFER">READY</span>
+            </div>`).join('');
+
+            // In Transit
+            updateBadge("initiatedCount", initiated.length);
+            document.getElementById("initiatedList").innerHTML = initiated.length === 0
+                ? '<p class="empty-notif">No transfers currently in transit.</p>'
+                : initiated.map(t => `
+            <div class="notif-card info">
+              <div>
+                <div class="notif-title">🚚 Transfer #${t.id} — ${t.machines?.code || '—'}</div>
+                <div class="notif-sub">
+                  <strong>${t.fromConcern?.name || '—'}</strong> →
+                  <strong>${t.toConcern?.name || '—'}</strong> &nbsp;|&nbsp;
+                  Initiated: ${formatDateTime(t.initiatedAt)}
+                </div>
+              </div>
+              <button class="btn-success" style="padding:7px 14px; font-size:11px;" onclick="receiveTransfer(${t.id})">📥 Receive</button>
+            </div>`).join('');
+
+            // Completed
+            updateBadge("completedCount", completed.length);
+            document.getElementById("completedList").innerHTML = completed.length === 0
+                ? '<p class="empty-notif">No completed transfers to show.</p>'
+                : completed.map(t => `
+            <div class="notif-card success">
+              <div>
+                <div class="notif-title">✅ Transfer #${t.id} — ${t.machines?.code || '—'}</div>
+                <div class="notif-sub">
+                  <strong>${t.fromConcern?.name || '—'}</strong> →
+                  <strong>${t.toConcern?.name || '—'}</strong> &nbsp;|&nbsp;
+                  Completed: ${formatDateTime(t.completedAt)}
+                </div>
+              </div>
+              <span class="status-badge status-COMPLETED">COMPLETED</span>
+            </div>`).join('');
+
+        } catch (err) { console.error("Error loading notifications:", err); }
+    }
+
+    async function receiveTransfer(transferId) {
+        if (!confirm(`Receive Transfer #${transferId}?`)) return;
+        try {
+            await apiRequest(`/transfer/receive?transferId=${transferId}`, "POST");
+            loadNotifications();
+        } catch (err) { alert("Error: " + err.message); }
+    }
+
+    function updateBadge(id, count) {
+        const el = document.getElementById(id);
+        el.textContent = count;
+        el.style.display = count > 0 ? 'inline' : 'none';
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Transfers - Admin</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+
+<header class="main-header">
+  <div class="header-left">
+    <span id="userInfo" class="user-info"></span>
+  </div>
+
+  <h2>ADMIN transfers</h2>
+
+  <div class="header-right">
+    <a href="admin-notifications.html" class="notification-btn">Notifications</a>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+
+
+<nav class="navigation">
+  <a href="admin-dashboard.html">Dashboard</a>
+  <a href="admin-machines.html">Machines</a>
+  <a href="admin-users.html">Users</a>
+  <a href="admin-transfers.html" class="active">Transfers</a>
+  <a href="admin-register.html">Register User</a>
+  <a href="admin-profile.html">Profile</a>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <h3>Initiate Transfer</h3>
+    <form onsubmit="event.preventDefault(); initiateTransfer();">
+      <input type="number" id="transferMachineId" placeholder="Machine ID" required>
+      <input type="text" id="transferToConcern" placeholder="Target Concern Name" required>
+      <button type="submit">Initiate Transfer</button>
+    </form>
+    <p id="initiateMsg" class="message"></p>
+  </div>
+
+  <div class="card">
+    <h3>Receive Transfer</h3>
+    <form onsubmit="event.preventDefault(); receiveTransfer();">
+      <input type="number" id="receiveTransferId" placeholder="Transfer ID" required>
+      <button type="submit">Receive Transfer</button>
+    </form>
+    <p id="receiveMsg" class="message"></p>
+  </div>
+
+  <div class="card">
+    <h3>Return Machine</h3>
+    <form onsubmit="event.preventDefault(); returnTransfer();">
+      <input type="number" id="returnTransferId" placeholder="Transfer ID" required>
+      <button type="submit">Return Machine</button>
+    </form>
+    <p id="returnMsg" class="message"></p>
+  </div>
+
+  <div class="card">
+    <h3>Transfer History</h3>
+    <button onclick="loadTransfers()">Refresh</button>
+    <table id="transferTable">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Machine</th>
+        <th>From</th>
+        <th>To</th>
+        <th>Status</th>
+        <th>Initiated</th>
+        <th>Completed</th>
+        <th>Returned</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    displayUserInfo();
+    loadTransfers();
+  });
+
+  async function initiateTransfer() {
+    const machineId = document.getElementById("transferMachineId").value;
+    const toConcernName = document.getElementById("transferToConcern").value.trim();
+    const msg = document.getElementById("initiateMsg");
+
+    try {
+      const result = await apiRequest(`/transfer/initiate?machineId=${machineId}&toConcernName=${encodeURIComponent(toConcernName)}`, "POST");
+      showMessage('initiateMsg', `Transfer initiated! Transfer ID: ${result.id}`, 'success');
+      document.getElementById("transferMachineId").value = "";
+      document.getElementById("transferToConcern").value = "";
+      loadTransfers();
+    } catch (err) {
+      showMessage('initiateMsg', "Error: " + err.message, 'error');
+    }
+  }
+
+  async function receiveTransfer() {
+    const transferId = document.getElementById("receiveTransferId").value;
+    const msg = document.getElementById("receiveMsg");
+
+    try {
+      const result = await apiRequest(`/transfer/receive?transferId=${transferId}`, "POST");
+      showMessage('receiveMsg', `Transfer received! Status: ${result.status}`, 'success');
+      document.getElementById("receiveTransferId").value = "";
+      loadTransfers();
+    } catch (err) {
+      showMessage('receiveMsg', "Error: " + err.message, 'error');
+    }
+  }
+
+  async function returnTransfer() {
+    const transferId = document.getElementById("returnTransferId").value;
+    const msg = document.getElementById("returnMsg");
+
+    try {
+      const result = await apiRequest(`/transfer/return?transferId=${transferId}`, "POST");
+      showMessage('returnMsg', `Machine returned! Status: ${result.status}`, 'success');
+      document.getElementById("returnTransferId").value = "";
+      loadTransfers();
+    } catch (err) {
+      showMessage('returnMsg', "Error: " + err.message, 'error');
+    }
+  }
+
+  async function loadTransfers() {
+    try {
+      const transfers = await apiRequest("/superadmin/transfers");
+      const tbody = document.querySelector("#transferTable tbody");
+      tbody.innerHTML = "";
+
+      if (transfers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8">No transfers found</td></tr>';
+        return;
+      }
+
+      transfers.forEach(t => {
+        tbody.innerHTML += `
+                <tr>
+                    <td>${t.id}</td>
+                    <td>${t.machines?.code || '-'}</td>
+                    <td>${t.fromConcern?.name || '-'}</td>
+                    <td>${t.toConcern?.name || '-'}</td>
+                    <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                    <td>${formatDateTime(t.initiatedAt)}</td>
+                    <td>${formatDateTime(t.completedAt)}</td>
+                    <td>${formatDateTime(t.returnedAt)}</td>
+                </tr>
+            `;
+      });
+    } catch (err) {
+      alert("Error loading transfers: " + err.message);
+    }
+  }
+</script>
+
+</body>
+</html>

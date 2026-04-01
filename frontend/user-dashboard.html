@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard — Four H Group MMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="main-header"></header>
+
+<nav class="navigation">
+  <a href="user-dashboard.html" class="active">Dashboard</a>
+  <a href="scan.html">Scan QR</a>
+</nav>
+
+<div class="container">
+
+  <div class="page-title-bar">
+    <div>
+      <div class="page-title">My Machines</div>
+      <div class="page-subtitle" id="concernLabel">Loading...</div>
+    </div>
+    <button class="btn-ghost" onclick="loadMachines()" style="font-size:11px; padding:8px 14px;">↻ Refresh</button>
+  </div>
+
+  <!-- Machines Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-title-icon"></span>Machines in My Concern</div>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <div class="table-wrapper">
+        <table id="machineTable">
+          <thead>
+          <tr>
+            <th>ID</th>
+            <th>Code</th>
+            <th>Group</th>
+            <th>Status</th>
+            <th>Origin</th>
+            <th>Current Location</th>
+            <th>QR</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-light);">Loading machines...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Initiate Transfer Section -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="card-title-icon"></span>Initiate Transfer</div>
+    </div>
+    <div class="card-body">
+      <p class="info-text">ℹ️ Select a machine and target concern. Machine must be IDLE, ACTIVE, or READY TO TRANSFER.</p>
+
+      <div class="form-row">
+        <div class="form-group" style="min-width:240px;">
+          <label class="form-label">Select Machine</label>
+          <select id="transferMachineId">
+            <option value="">— Select Machine —</option>
+          </select>
+        </div>
+        <div class="form-group" style="min-width:200px;">
+          <label class="form-label">Target Concern</label>
+          <select id="transferToConcern">
+            <option value="">— Select Concern —</option>
+          </select>
+        </div>
+        <div style="padding-bottom:1px;">
+          <button class="btn-gold" onclick="initiateTransfer()">🚀 Initiate Transfer</button>
+        </div>
+      </div>
+
+      <div id="transferMsg" class="message" style="display:none;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- QR Modal -->
+<div id="qrModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Machine QR Code</div>
+      <button class="modal-close" onclick="closeQRModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="qrCodeContainer"></div>
+      <div id="machineDetailsContainer"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeQRModal()">Close</button>
+      <button class="btn-primary" onclick="printQR()">🖨️ Print QR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer Confirmation Modal -->
+<div id="transferModal" class="modal">
+  <div class="modal-content" style="max-width:450px;">
+    <div class="modal-header">
+      <div class="modal-title">Confirm Transfer</div>
+      <button class="modal-close" onclick="closeTransferModal()">✕</button>
+    </div>
+    <div class="modal-body" id="transferModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeTransferModal()">Cancel</button>
+      <button id="confirmTransferBtn" class="btn-gold">Confirm Transfer</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  let allMachines = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    buildHeader('User Dashboard', '#');
+    checkRole('USER');
+
+    const concern = getConcernName();
+    document.getElementById('concernLabel').textContent =
+            concern && concern !== 'null' ? 'Concern: ' + concern : 'Four H Group';
+
+    loadMachines();
+    loadConcerns();
+  });
+
+  async function loadMachines() {
+    try {
+      const concernId = getConcernId();
+      if (!concernId) {
+        document.querySelector('#machineTable tbody').innerHTML =
+                '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--danger);">You are not assigned to any concern. Contact your administrator.</td></tr>';
+        return;
+      }
+      allMachines = await apiRequest("/admin/machines");
+      renderMachineTable(allMachines);
+      populateMachineSelect(allMachines);
+    } catch (err) {
+      document.querySelector('#machineTable tbody').innerHTML =
+              `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--danger);">Error: ${err.message}</td></tr>`;
+    }
+  }
+
+  function renderMachineTable(machines) {
+    const tbody = document.querySelector("#machineTable tbody");
+    if (machines.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-light);">No machines found in your concern</td></tr>';
+      return;
+    }
+    tbody.innerHTML = machines.map(m => {
+      const canMarkReady = m.status === 'IDLE' || m.status === 'ACTIVE';
+      const canTransfer  = m.status === 'READY_TO_TRANSFER';
+      return `
+        <tr>
+          <td class="td-bold">#${m.id}</td>
+          <td class="td-bold">${m.code}</td>
+          <td>${m.groupName}</td>
+          <td><span class="status-badge status-${m.status}">${m.status.replace(/_/g,' ')}</span></td>
+          <td>${m.originConcern?.name || '—'}</td>
+          <td>${m.currentConcern?.name || '—'}</td>
+          <td><button class="btn-info" style="padding:6px 10px; font-size:11px;" onclick="viewQRCode(${m.id})">QR</button></td>
+          <td>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              ${canMarkReady ? `<button class="btn-success" style="padding:6px 12px; font-size:11px;" onclick="markReady(${m.id})">✔ Mark Ready</button>` : ''}
+              ${canTransfer  ? `<button class="btn-gold"    style="padding:6px 12px; font-size:11px;" onclick="openTransferModal(${m.id})">🚀 Transfer</button>` : ''}
+              ${!canMarkReady && !canTransfer ? '<span style="color:var(--text-light); font-size:12px;">—</span>' : ''}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function populateMachineSelect(machines) {
+    const select = document.getElementById("transferMachineId");
+    select.innerHTML = '<option value="">— Select Machine —</option>';
+    machines
+            .filter(m => ['IDLE','ACTIVE','READY_TO_TRANSFER'].includes(m.status))
+            .forEach(m => {
+              select.innerHTML += `<option value="${m.id}">${m.code} — ${m.groupName} (${m.status.replace(/_/g,' ')})</option>`;
+            });
+  }
+
+  async function loadConcerns() {
+    try {
+      const concerns = await apiRequest("/superadmin/concerns");
+      const myConcernName = getConcernName();
+      const select = document.getElementById("transferToConcern");
+      select.innerHTML = '<option value="">— Select Concern —</option>';
+      concerns.filter(c => c.name !== myConcernName).forEach(c => {
+        select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+      });
+    } catch (err) { console.error(err); }
+  }
+
+  async function markReady(id) {
+    if (!confirm("Mark this machine as READY_TO_TRANSFER?")) return;
+    try {
+      await apiRequest(`/user/machines/${id}/ready`, "PUT");
+      showMessage('transferMsg', "Machine marked as READY TO TRANSFER.", 'success');
+      loadMachines();
+    } catch (err) {
+      showMessage('transferMsg', "Error: " + err.message, 'error');
+    }
+  }
+
+  function openTransferModal(machineId) {
+    const machine = allMachines.find(m => m.id === machineId);
+    if (!machine) return;
+
+    const mainSelect = document.getElementById("transferToConcern");
+    document.getElementById("transferModalBody").innerHTML = `
+      <div class="machine-info" style="margin-bottom:16px;">
+        <p><strong>Machine</strong>${machine.code} — ${machine.groupName}</p>
+        <p><strong>Status</strong><span class="status-badge status-${machine.status}">${machine.status.replace(/_/g,' ')}</span></p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Concern</label>
+        <select id="modalToConcern">${mainSelect.innerHTML}</select>
+      </div>
+    `;
+    document.getElementById("confirmTransferBtn").onclick = () => confirmTransfer(machineId);
+    document.getElementById("transferModal").style.display = "block";
+  }
+
+  function closeTransferModal() {
+    document.getElementById("transferModal").style.display = "none";
+  }
+
+  async function confirmTransfer(machineId) {
+    const toConcernName = document.getElementById("modalToConcern").value;
+    if (!toConcernName) { alert("Please select a target concern."); return; }
+    try {
+      const result = await apiRequest(`/user/machines/${machineId}/transfer?toConcernName=${encodeURIComponent(toConcernName)}`, "POST");
+      closeTransferModal();
+      showMessage('transferMsg', `✅ Transfer initiated! Transfer ID: ${result.id}`, 'success');
+      loadMachines();
+    } catch (err) {
+      closeTransferModal();
+      showMessage('transferMsg', "Error: " + err.message, 'error');
+    }
+  }
+
+  async function initiateTransfer() {
+    const machineId = document.getElementById("transferMachineId").value;
+    const toConcernName = document.getElementById("transferToConcern").value;
+    if (!machineId || !toConcernName) {
+      showMessage('transferMsg', "Please select both a machine and target concern.", 'warning');
+      return;
+    }
+    if (!confirm(`Initiate transfer to "${toConcernName}"?`)) return;
+    try {
+      const result = await apiRequest(`/user/machines/${machineId}/transfer?toConcernName=${encodeURIComponent(toConcernName)}`, "POST");
+      showMessage('transferMsg', `✅ Transfer initiated! Transfer ID: ${result.id}`, 'success');
+      document.getElementById("transferMachineId").value = "";
+      document.getElementById("transferToConcern").value = "";
+      loadMachines();
+    } catch (err) {
+      showMessage('transferMsg', "Error: " + err.message, 'error');
+    }
+  }
+
+  async function viewQRCode(machineId) {
+    try {
+      const [machine, qrData] = await Promise.all([
+        apiRequest(`/machines/${machineId}`),
+        apiRequest(`/machines/qr/base64/${machineId}`)
+      ]);
+      document.getElementById("qrCodeContainer").innerHTML =
+              `<img src="${qrData.base64}" alt="QR Code" class="qr-image">`;
+      document.getElementById("machineDetailsContainer").innerHTML = `
+        <div class="machine-info">
+          <p><strong>Code</strong>${machine.code}</p>
+          <p><strong>Group</strong>${machine.groupName}</p>
+          <p><strong>Status</strong><span class="status-badge status-${machine.status}">${machine.status.replace(/_/g,' ')}</span></p>
+          <p><strong>Origin</strong>${machine.originConcern?.name || '—'}</p>
+          <p><strong>Current</strong>${machine.currentConcern?.name || '—'}</p>
+        </div>
+      `;
+      showQRModal();
+    } catch (err) { alert("Error loading QR: " + err.message); }
+  }
+
+  window.onclick = function(e) {
+    if (e.target === document.getElementById('qrModal')) closeQRModal();
+    if (e.target === document.getElementById('transferModal')) closeTransferModal();
+  };
+</script>
+
+</body>
+</html>
